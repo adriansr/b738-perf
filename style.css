@@ -1,3 +1,49 @@
-.body {
-    background-color: #dfffef
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #dfffef;
+    background-image: url('bg.jpg');
+}
+div.group {
+    background: rgba(200,255,200,0.3);
+    display: table-cell;
+    border-style: solid;
+    vertical-align: middle;
+    padding: 1em;
+}
+
+div.row {
+    padding-bottom: 4px;
+}
+
+.title {
+    text-align: center;
+    font-size: large;
+    background-color: white;
+    width: 100%;
+    display: inline-block;
+    padding: 4px;
+    margin-bottom: 1em;
+}
+
+div.row label {
+    display: inline-block;
+    width: 200px;
+    padding-right: 10px;
+    border-bottom: dotted 1px;
+}
+
+div.row label.unit {
+    display: inline-block;
+    width: fit-content;
+    padding-left: 4px;
+    font-size: small;
+    border-bottom: none;
+}
+
+label .input {
+    color: white;
+}
+
+label .output {
+    color: orange;
 }
