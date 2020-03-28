@@ -117,7 +117,11 @@ class Planner {
         if (obj.dep !== undefined) {
             return [obj.dep];
         }
-        return this._getDeps(obj.left).concat(this._getDeps(obj.right));
+        let deps = [];
+        for (let i = 0; i < obj.arg.length; i++) {
+            deps = deps.concat(this._getDeps(obj.arg[i]));
+        }
+        return deps;
     }
     computeDeps() {
         // key:output -> [input|output *]
@@ -222,12 +226,17 @@ class Planner {
             label.setAttribute('for',field.variable);
             label.innerHTML = field.label;
             let v = this.vars[field.variable];
+            if (v === undefined) {
+                console.log('Undefined variable in form: ' + field.variable);
+                return;
+            }
             if (this.inputs[field.variable] !== undefined) {
                 if (field.default !== undefined) {
                     v.set(field.default);
                 }
                 label.setAttribute("class", "input");
                 let input = document.createElement('input');
+                input.setAttribute('type', 'text');
                 input.setAttribute('id', field.variable);
                 input.setAttribute('class', 'input');
                 input.setAttribute('value', v.get());
@@ -239,6 +248,7 @@ class Planner {
             if (this.outputs[field.variable] !== undefined) {
                 label.setAttribute("class", "output");
                 let output = document.createElement('input');
+                output.setAttribute('type', 'text');
                 output.setAttribute('id', field.variable);
                 output.setAttribute('class', 'output');
                 output.setAttribute('disabled',null);
@@ -349,56 +359,54 @@ class SetDecorator {
 
 function add(a, b) {
     return {
-        left: a,
-        right: b,
+        arg: [a, b],
         get: function() {
-            let a = this.left.get();
-            let b = this.right.get();
-            let r = a + b;
-            console.log('add a:'+a+' b:'+b+' result:'+r);
-            return  r;
+            return  this.arg[0].get() + this.arg[1].get();
         }
     }
 }
 
 function sub(a, b) {
     return {
-        left: a,
-        right: b,
+        arg: [a, b],
         get: function() {
-            let a = this.left.get();
-            let b = this.right.get();
-            let r = a - b;
-            console.log('sub a:'+a+' b:'+b+' result:'+r);
-            return  r;
+            return  this.arg[0].get() - this.arg[1].get();
         }
     }
 }
 
 function neg(a) {
     return {
-        left: a,
+        arg: [a],
         get: function() {
-            return - this.left.get();
+            return - this.arg[0].get();
         }
     }
 }
 
 function mul(a, b) {
     return {
-        left: a,
-        right: b,
+        arg: [a, b],
         get: function() {
-            return this.left.get() * this.right.get();
+            return this.arg[0].get() * this.arg[1].get();
+        }
+    }
+}
+
+function div(a, b) {
+    return {
+        arg: [a, b],
+        get: function() {
+            return this.arg[0].get() / this.arg[1].get();
         }
     }
 }
 
 function cos(a) {
     return {
-        left: a,
+        arg: [a],
         get: function() {
-            let a = this.left.get();
+            let a = this.arg[0].get();
             if (a > 180) {
                 a = 360 - a;
             }
@@ -409,9 +417,9 @@ function cos(a) {
 
 function sin(a) {
     return {
-        left: a,
+        arg: [a],
         get: function() {
-            let a = this.left.get();
+            let a = this.arg[0].get();
             if (a > 180) {
                 a = 360 - a;
             }
@@ -420,11 +428,45 @@ function sin(a) {
     }
 }
 
+function lookup(table, dimensions) {
+    let n = dimensions.length;
+    if (n != 2) {
+        console.log('Cannot interpolate table other than 2d');
+        return null;
+    }
+
+    return {
+        arg: dimensions,
+        get: function() {
+            let dims = this.arg.slice();
+            for (let i=0; i<n; i++) {
+                dims[i] = dims[i].get();
+            }
+            return interpolate2d(table, dims);
+        }
+    }
+}
+
+function constant(value) {
+    return {
+        arg: [],
+        get: function() {
+            return value;
+        }
+    }
+}
+
 function round(places) {
     let k = Math.pow(10, places);
     return function(value) {
-        console.log("round("+value+") k:"+k);
         return Math.round(value * k) / k;
+    }
+}
+
+function ceil(places) {
+    let k = Math.pow(10, places);
+    return function(value) {
+        return Math.ceil(value * k) / k;
     }
 }
 
@@ -436,6 +478,8 @@ function identity() {
 
 function loadPlanner(contId) {
     var planner = new Planner("container");
+
+    // Units
     planner.addUnit(new Unit('deg')
         .withRange(0, 360)
         .withWrap());
@@ -444,6 +488,11 @@ function loadPlanner(contId) {
         .withWrap());
     planner.addUnit(new Unit('ft'));
     planner.addUnit(new Unit('kt'));
+    planner.addUnit(new Unit('lbs'));
+    planner.addUnit(new Unit('nm'));
+    planner.addUnit(new Unit('%'));
+
+    // Departure
     planner.addInput('dep_head_mag', 'deg');
     planner.addInput('dep_mag_var', 'deg');
     planner.addInput('dep_wind_true', 'true');
@@ -461,9 +510,33 @@ function loadPlanner(contId) {
         mul(planner.value('dep_wind_kt'),
             sin(planner.value('_offset_deg'))));
 
+    // Payload
+    planner.addInput('payload', 'lbs');
+    planner.addInput('trip_dist', 'nm');
+    planner.addInput('trip_tailwind', 'kt');
+    planner.addOutput('air_dist', 'nm', ceil(0),
+        lookup(groundToAirMiles, 
+            [
+                planner.value('trip_dist'),
+                planner.value('trip_tailwind')
+            ]
+            ));
+
+    // Runway slope.
+    planner.addInput('near_rw_alt', 'ft');
+    planner.addInput('far_rw_alt', 'ft');
+    planner.addInput('runway_length', 'ft');
+    planner.addOutput('runway_slope', '%', round(2),
+            mul(div(sub(planner.value('far_rw_alt'),
+                        planner.value('near_rw_alt')),
+                    planner.value('runway_length')),
+                constant(100))
+        );
+
     // finished declaring i/o variables.
     planner.computeDeps();
 
+    // Forms
     planner.addForm({
         title: 'Departure',
         fields: [
@@ -494,6 +567,56 @@ function loadPlanner(contId) {
             {
                 label: 'Calculated crosswind',
                 variable: 'dep_crosswind',
+            }
+        ],
+    });
+
+    planner.addForm({
+        title: 'Trip',
+        fields: [
+            {
+                label: 'Payload',
+                variable: 'payload',
+                default: 25000,
+            },
+            {
+                label: 'Trip distance',
+                variable: 'trip_dist',
+                default: 1200,
+            },
+            {
+                label: 'Expected tailwind',
+                variable: 'trip_tailwind',
+                default: 10,
+            },
+            {
+                label: 'Calculated Air Distance',
+                variable: 'air_dist',
+            }
+        ]
+    });
+
+    planner.addForm({
+        title: 'Runway slope',
+        fields: [
+            {
+                label: 'Near runway end',
+                variable: 'near_rw_alt',
+                default: 352,
+            },
+            {
+                label: 'Far runway end',
+                variable: 'far_rw_alt',
+                default: 311,
+            },
+            {
+                label: 'Runway length',
+                variable: 'runway_length',
+                default: 7572,
+            },
+            {
+                label: 'Runway slope',
+                variable: 'runway_slope'
             }
         ],
     });

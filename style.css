@@ -2,10 +2,11 @@ body {
     font-family: Arial, Helvetica, sans-serif;
     background-color: #dfffef;
     background-image: url('bg.jpg');
+    background-position: right;
 }
 div.group {
     background: rgba(200,255,200,0.3);
-    display: table-cell;
+    /*display: table-cell;*/
     border-style: solid;
     vertical-align: middle;
     padding: 1em;
@@ -40,10 +41,12 @@ div.row label.unit {
     border-bottom: none;
 }
 
-label .input {
-    color: white;
+.input input {
+    background-color: #dfdfdf;
 }
 
-label .output {
-    color: orange;
+.output {
+    /*background-color: #a0a0df;*/
+    color: darkblue;
+    font-weight: bold;
 }
