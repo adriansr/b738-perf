@@ -519,22 +519,15 @@ function identity() {
     }
 }
 
-function seconds() {
+function minutes() {
     return function(value) {
         value = Math.ceil(value);
-        let h = ~~(value / 3600),
-            m = ~~((value%3600) / 60),
-            s =    value % 60;
-        if (h>0 && m < 10) {
+        let h = ~~(value / 60),
+            m = ~~(value % 60);
+        if (m < 10) {
             m = '0' + m;
         }
-        if (s < 10) {
-            s = '0' + s;
-        }
-        if (h == 0) {
-            return "" + m + ":" + s;
-        }
-        return "" + h + ":" + m + ":" + s;
+        return "" + h + ":" + m;
     }
 }
 function loadPlanner(contId) {
@@ -553,7 +546,7 @@ function loadPlanner(contId) {
     planner.addUnit(new Unit('kg'));
     planner.addUnit(new Unit('nm'));
     planner.addUnit(new Unit('%'));
-    planner.addUnit(new Unit('h:mm:ss'));
+    planner.addUnit(new Unit('hh:mm'));
     planner.addUnit(new Unit('num'));
 
     // Constants
@@ -610,7 +603,7 @@ function loadPlanner(contId) {
                 planner.value('alt_dist'),
                 planner.value('alt_tailwind')
             ]));
-    planner.addOutput('alt_time', 'h:mm:ss', seconds(),
+    planner.addOutput('alt_time', 'hh:mm', minutes(),
         lookup(tripTimeRequiredShort,
             [
                 planner.value('alt_air_dist'),
@@ -628,6 +621,10 @@ function loadPlanner(contId) {
                     planner.value('alt_air_dist'),
                     planner.value('alt_arr_kg')
                 ])));
+
+    planner.addOutput('dep_fuel', 'lbs', ceil(0),
+        add(planner.value('alt_fuel'),
+            planner.value('alt_arr_fuel'));
     
     // Departure
     planner.addInput('dep_head_mag', 'deg');
@@ -647,10 +644,10 @@ function loadPlanner(contId) {
         mul(planner.value('dep_wind_kt'),
             sin(planner.value('_offset_deg'))));
 
-    // Payload
-
+    // Trip
     planner.addInput('trip_dist', 'nm', 1150);
     planner.addInput('trip_tailwind', 'kt', 0);
+    planner.addInput('trip_alt', 'ft', 35000);
     planner.addOutput('air_dist', 'nm', round(1),
         branch({
             if: lte(planner.value('trip_dist'),
@@ -666,9 +663,12 @@ function loadPlanner(contId) {
                     planner.value('trip_tailwind')
                 ])
         }));
-    planner.addOutput('trip_time', 'h:mm:ss', seconds(),
+    planner.addOutput('trip_time', 'hh:mm', minutes(),
         lookup(tripTimeRequired,
-            [planner.value('air_dist')])
+            [
+                planner.value('air_dist'),
+                planner.value('trip_alt')
+            ])
     );
 
     // Runway slope.
@@ -710,7 +710,7 @@ function loadPlanner(contId) {
                 variable: 'zero_fuel_lbs',
             },
             {
-                label: 'Zero fuel weight',
+                label: '',
                 variable: 'zero_fuel_kg',
             }
         ]
@@ -740,7 +740,7 @@ function loadPlanner(contId) {
                 variable: 'alt_arr_lbs',
             },
             {
-                label: 'Landing weight (alternate)',
+                label: '',
                 variable: 'alt_arr_kg',
             }
         ]
@@ -777,49 +777,9 @@ function loadPlanner(contId) {
         ]
     });
 
-    
-
-    planner.addForm({
-        title: 'Departure',
-        fields: [
-            {
-                label: 'Magnetic variation',
-                variable: 'dep_mag_var',
-                default: 1,
-            },
-            {
-                label: 'Runway heading',
-                variable: 'dep_head_mag',
-                default: 60,
-            },
-            {
-                label: 'Wind direction from METAR',
-                variable: 'dep_wind_true',
-                default: 30,
-            },
-            {
-                label: 'Wind speed',
-                variable: 'dep_wind_kt',
-                default: 5,
-            },
-            {
-                label: 'Calculated headwind',
-                variable: 'dep_headwind',
-            },
-            {
-                label: 'Calculated crosswind',
-                variable: 'dep_crosswind',
-            }
-        ],
-    });
-
     planner.addForm({
         title: 'Trip',
         fields: [
-            {
-                label: 'Payload',
-                variable: 'payload',
-            },
             {
                 label: 'Trip distance',
                 variable: 'trip_dist',
@@ -829,6 +789,10 @@ function loadPlanner(contId) {
                 label: 'Expected tailwind',
                 variable: 'trip_tailwind',
                 default: 10,
+            },
+            {
+                label: 'Cruise altitude (29000-37000)',
+                variable: 'trip_alt'
             },
             {
                 label: 'Calculated Air Distance',
@@ -862,6 +826,40 @@ function loadPlanner(contId) {
             {
                 label: 'Runway slope',
                 variable: 'runway_slope'
+            }
+        ],
+    });
+
+    planner.addForm({
+        title: 'Departure',
+        fields: [
+            {
+                label: 'Magnetic variation',
+                variable: 'dep_mag_var',
+                default: 1,
+            },
+            {
+                label: 'Runway heading',
+                variable: 'dep_head_mag',
+                default: 60,
+            },
+            {
+                label: 'Wind direction from METAR',
+                variable: 'dep_wind_true',
+                default: 30,
+            },
+            {
+                label: 'Wind speed',
+                variable: 'dep_wind_kt',
+                default: 5,
+            },
+            {
+                label: 'Calculated headwind',
+                variable: 'dep_headwind',
+            },
+            {
+                label: 'Calculated crosswind',
+                variable: 'dep_crosswind',
             }
         ],
     });

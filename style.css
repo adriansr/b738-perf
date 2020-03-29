@@ -8,7 +8,7 @@ body {
 div.group {
     background: rgba(230,230,250,0.6);
     border-style: solid;
-    display: block; /*table-cell;*/
+    /*display: block; /*table-cell;*/
     /*vertical-align: middle;*/
     padding: 1em;
     margin: 0.5em;
