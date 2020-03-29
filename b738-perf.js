@@ -567,7 +567,7 @@ function loadPlanner(contId) {
     // Payload
     planner.addInput('cargo', 'lbs', 15000);
     planner.addInput('pax', 'num', 150);
-    planner.addInput('pax_weight', 'lbs', 190);
+    planner.addInput('pax_weight', 'lbs', 180);
     planner.addOutput('payload', 'lbs', ceil(0),
         add(
             planner.value('cargo'),
@@ -603,7 +603,7 @@ function loadPlanner(contId) {
     
     // Alternate
     planner.addInput('alt_dist', 'nm', 100);
-    planner.addInput('alt_tailwind', 'kt', -10);
+    planner.addInput('alt_tailwind', 'kt', 0);
     planner.addOutput('alt_air_dist', 'nm', round(1),
         lookup(groundToAirMilesShort,
             [
@@ -649,8 +649,8 @@ function loadPlanner(contId) {
 
     // Payload
 
-    planner.addInput('trip_dist', 'nm');
-    planner.addInput('trip_tailwind', 'kt');
+    planner.addInput('trip_dist', 'nm', 1150);
+    planner.addInput('trip_tailwind', 'kt', 0);
     planner.addOutput('air_dist', 'nm', round(1),
         branch({
             if: lte(planner.value('trip_dist'),
@@ -667,7 +667,7 @@ function loadPlanner(contId) {
                 ])
         }));
     planner.addOutput('trip_time', 'h:mm:ss', seconds(),
-        lookup(tripTimeRequiredShort,
+        lookup(tripTimeRequired,
             [planner.value('air_dist')])
     );
 
@@ -819,7 +819,6 @@ function loadPlanner(contId) {
             {
                 label: 'Payload',
                 variable: 'payload',
-                default: 25000,
             },
             {
                 label: 'Trip distance',

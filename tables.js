@@ -21,13 +21,14 @@ function range(from, to, step) {
 var groundToAirMilesShort = {
     keys: [
         // Ground distance for trip (nm).
-        range(50, 500, 50),
+        range(0, 500, 50),
 
         // Tailwind factor (kt).
         range(-100,100, 20),
     ],
     data: [
-        [ 93,  80,  69,  61,  55, 50,   46,  42,  39,  36,  34],
+        [  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+        [ 93,  80,  69,  61,  55,  50,  46,  42,  39,  36,  34],
         [160, 143, 129, 118, 108, 100,  93,  87,  82,  77,  73],
         [225, 205, 188, 173, 161, 150, 141, 132, 125, 118, 112],
         [290, 266, 246, 228, 213, 200, 188, 178, 169, 160, 153],
@@ -84,19 +85,20 @@ var groundToAirMiles = {
 var tripTimeRequiredShort = {
     keys: [
         // Air distance for trip (nm).
-        range(50, 500, 50),
+        range(0, 500, 50),
     ],
-    data: [14, 22, 30, 37, 44, 50, 56, 63, 70, 77],
+    data: [0, 14, 22, 30, 37, 44, 50, 56, 63, 70, 77],
 }
 
 var tripFuelRequiredShort = {
     keys: [
         // Air distance for trip (nm).
-        range(50, 500, 50),
+        range(0, 500, 50),
         // Landing weight (kg)
         range(40000, 70000, 5000)
     ],
     data: [
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         [0.5, 0.5, 0.6, 0.6, 0.7, 0.7, 0.7],
         [0.8, 0.9, 0.9, 1.0, 1.0, 1.1, 1.1],
         [1.1, 1.1, 1.2, 1.3, 1.3, 1.4, 1.5],
