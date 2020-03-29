@@ -81,6 +81,71 @@ var groundToAirMiles = {
     ]
 }
 
+var tripTimeRequiredShort = {
+    keys: [
+        // Air distance for trip (nm).
+        range(50, 500, 50),
+    ],
+    data: [14, 22, 30, 37, 44, 50, 56, 63, 70, 77],
+}
+
+var tripFuelRequiredShort = {
+    keys: [
+        // Air distance for trip (nm).
+        range(50, 500, 50),
+        // Landing weight (kg)
+        range(40000, 70000, 5000)
+    ],
+    data: [
+        [0.5, 0.5, 0.6, 0.6, 0.7, 0.7, 0.7],
+        [0.8, 0.9, 0.9, 1.0, 1.0, 1.1, 1.1],
+        [1.1, 1.1, 1.2, 1.3, 1.3, 1.4, 1.5],
+        [1.3, 1.4, 1.5, 1.6, 1.6, 1.7, 1.8],
+        [1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1],
+        [1.7, 1.8, 1.9, 2.1, 2.2, 2.3, 2.4],
+        [1.9, 2.0, 2.2, 2.3, 2.4, 2.6, 2.7],
+        [2.1, 2.2, 2.4, 2.5, 2.7, 2.9, 3.0],
+        [2.3, 2.5, 2.6, 2.8, 3.0, 3.1, 3.3],
+        [2.5, 2.7, 2.8, 3.0, 3.2, 3.4, 3.6],
+    ]
+}
+
+var tripAltitudeRequiredShort = {
+    keys: [
+        // Air distance for trip (nm).
+        range(50, 500, 50),
+        // Landing weight (kg)
+        range(40000, 70000, 5000)
+    ],
+    data: [
+        [12000, 12000, 11000, 11000,  9000,  9000,  8000], 
+        [19000, 18000, 18000, 18000, 17000, 17000, 17000], 
+        [26000, 25000, 25000, 24000, 23000, 22000, 22000],
+        [35000, 30000, 28000, 27000, 26000, 26000, 26000], 
+        [40000, 37000, 36000, 35000, 34000, 31000, 30000],
+        [41000, 40000, 39000, 37000, 35000, 34000, 32000],
+        [41000, 40000, 40000, 38000, 36000, 35000, 33000],
+        [41000, 40000, 40000, 38000, 36000, 35000, 33000],
+        [41000, 41000, 40000, 38000, 36000, 35000, 34000],
+        [41000, 41000, 40000, 38000, 36000, 35000, 34000]
+    ]
+}
+
+function interpolate1d(table, dims) {
+    let n = dims.length;
+    if (n != 1 || n != table.keys.length) {
+        console.log("bad dimensions to interpolate1d table");
+        return null;
+    }
+    let x = nearestIdx(table.keys[0], dims[0]);
+    let r = linearInterpolate(
+        table.keys[0][x[0]], table.data[x[0]],
+        table.keys[0][x[1]], table.data[x[1]],
+        dims[0]);
+    console.log('interpolate1d dims:' + dims + ' r:'+r);
+    return r;
+}
+
 function interpolate2d(table, dims) {
     let n = dims.length;
     if (n != 2 || n != table.keys.length) {
@@ -98,7 +163,7 @@ function interpolate2d(table, dims) {
     let r   = linearInterpolate(table.keys[1][y[0]], iy0,
                                 table.keys[1][y[1]], iy1,
                                 dims[1]);
-    console.log('interpolate dims:' + dims + ' r:'+r);
+    console.log('interpolate2d dims:' + dims + ' r:'+r);
     return r;
 }
 
@@ -129,3 +194,4 @@ function linearInterpolate(x1, y1, x2, y2, x) {
 }
 
 interpolate2d(groundToAirMiles, [2920, -50]);
+interpolate1d(tripTimeRequiredShort, [400]);

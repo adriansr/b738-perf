@@ -38,7 +38,7 @@ class Planner {
         this.units[u.name] = u;
     }
 
-    addInput(name, typeName) {
+    addInput(name, typeName, initialValue) {
         if (this.vars[name] !== undefined) {
             console.log('Var ' + name + ' already defined.');
             return null;
@@ -52,6 +52,7 @@ class Planner {
         if (v == null) {
             console.log('makeVar failed?!');
         }
+        v.set(initialValue);
         this.vars[name] = this.inputs[name] = v;
         return v;
     }
@@ -98,6 +99,9 @@ class Planner {
             console.log('No such unit:' + typeName + ' for output:' + name);
             return null;
         }
+        if (ops == null) {
+            console.log('Null ops expression for output:' + name);
+        }
         let v = new Var(name, unit);
         v.ops = ops;
         v.get = function() {
@@ -136,10 +140,10 @@ class Planner {
         let updates = {};
         for (const key in deps) {
             const list = deps[key];
-            console.log("Deps for: " + key + " = " + list);
+            //console.log("Deps for: " + key + " = " + list);
             for (let vi = 0; vi < list.length; vi++) {
                 const v = list[vi];
-                console.log(" - " + key + ":" + vi + " = " + v);
+                //console.log(" - " + key + ":" + vi + " = " + v);
                 if (updates[v] === undefined) {
                     updates[v] = [key];
                 } else {
@@ -147,18 +151,18 @@ class Planner {
                 }
             }
         };
-        for (const key in updates) {
-            console.log('initial updates for key:' + key + ' = ' + updates[key]);
-        }
+        //for (const key in updates) {
+        //    console.log('initial updates for key:' + key + ' = ' + updates[key]);
+        //}
         this.input_updates = {};
         for (const key in updates) {
             if (this.inputs[key] === undefined) continue;
             this.input_updates[key] = this._topoSort(updates[key], updates, deps);
-            console.log('updates for key:' + key + ' = ' + this.input_updates[key]);
+            //console.log('updates for key:' + key + ' = ' + this.input_updates[key]);
         }
     }
     _topoSort(list, updates, deps) {
-        console.log('toposort ' + list);
+        //console.log('toposort ' + list);
         let outputs = {};
         for (let i=0; i<list.length; i++) {
             let out = list[i];
@@ -184,9 +188,9 @@ class Planner {
                 }
             }
         }
-        for (let key in cardinality) {
-            console.log(" - cardinality " + key + " = " + cardinality[key] + " updates " + outputs[key]);
-        }
+        //for (let key in cardinality) {
+        //    console.log(" - cardinality " + key + " = " + cardinality[key] + " updates " + outputs[key]);
+        //}
         let asList = [];
         let n = Object.keys(cardinality).length;
         while (asList.length < n) {
@@ -357,11 +361,13 @@ class SetDecorator {
     }
 }
 
-function add(a, b) {
+function add() {
     return {
-        arg: [a, b],
+        arg: arguments,
         get: function() {
-            return  this.arg[0].get() + this.arg[1].get();
+            let total = 0;
+            for (let i=0; i<this.arg.length; i++) total += this.arg[i].get();
+            return  total;
         }
     }
 }
@@ -430,11 +436,11 @@ function sin(a) {
 
 function lookup(table, dimensions) {
     let n = dimensions.length;
-    if (n != 2) {
-        console.log('Cannot interpolate table other than 2d');
+    if (n < 1 || n > 2) {
+        console.log('Cannot interpolate table other than 1d or 2d');
         return null;
     }
-
+    let fn = n == 1? interpolate1d : interpolate2d;
     return {
         arg: dimensions,
         get: function() {
@@ -442,7 +448,7 @@ function lookup(table, dimensions) {
             for (let i=0; i<n; i++) {
                 dims[i] = dims[i].get();
             }
-            return interpolate2d(table, dims);
+            return fn(table, dims);
         }
     }
 }
@@ -513,6 +519,24 @@ function identity() {
     }
 }
 
+function seconds() {
+    return function(value) {
+        value = Math.ceil(value);
+        let h = ~~(value / 3600),
+            m = ~~((value%3600) / 60),
+            s =    value % 60;
+        if (h>0 && m < 10) {
+            m = '0' + m;
+        }
+        if (s < 10) {
+            s = '0' + s;
+        }
+        if (h == 0) {
+            return "" + m + ":" + s;
+        }
+        return "" + h + ":" + m + ":" + s;
+    }
+}
 function loadPlanner(contId) {
     var planner = new Planner("container");
 
@@ -526,9 +550,85 @@ function loadPlanner(contId) {
     planner.addUnit(new Unit('ft'));
     planner.addUnit(new Unit('kt'));
     planner.addUnit(new Unit('lbs'));
+    planner.addUnit(new Unit('kg'));
     planner.addUnit(new Unit('nm'));
     planner.addUnit(new Unit('%'));
+    planner.addUnit(new Unit('h:mm:ss'));
+    planner.addUnit(new Unit('num'));
 
+    // Constants
+    const EmptyWeight = constant(97060);
+    const MTOW = constant(174170);
+    const MLW  = constant(146275);
+    const LBStoKG = constant(0.453592);
+    const KGtoLBS = constant(1/0.453592);
+    const TNtoLBS = constant(1000/0.453592);
+
+    // Payload
+    planner.addInput('cargo', 'lbs', 15000);
+    planner.addInput('pax', 'num', 150);
+    planner.addInput('pax_weight', 'lbs', 190);
+    planner.addOutput('payload', 'lbs', ceil(0),
+        add(
+            planner.value('cargo'),
+            mul(
+                planner.value('pax'),
+                planner.value('pax_weight')
+            )
+        )
+    );
+    planner.addOutput('zero_fuel_lbs', 'lbs', ceil(0),
+        add(EmptyWeight,
+            planner.value('payload')));
+    planner.addOutput('zero_fuel_kg', 'kg', ceil(0),
+        mul(planner.value('zero_fuel_lbs'),
+            LBStoKG));
+
+    // Minimum fuel
+    planner.addInput('min_fuel', 'lbs', 2205);
+    planner.addInput('extra_fuel', 'lbs', 2205);
+    planner.addInput('arr_taxi_fuel', 'lbs', 500);
+    planner.addOutput('alt_arr_fuel', 'lbs', ceil(0),
+        add(
+            planner.value('min_fuel'),
+            planner.value('extra_fuel'),
+            planner.value('arr_taxi_fuel'),
+        )
+    );
+    planner.addOutput('alt_arr_lbs', 'lbs', ceil(0),
+        add(planner.value('zero_fuel_lbs'),
+            planner.value('alt_arr_fuel')));
+    planner.addOutput('alt_arr_kg', 'kg', ceil(0),
+            mul(planner.value('alt_arr_lbs'), LBStoKG));
+    
+    // Alternate
+    planner.addInput('alt_dist', 'nm', 100);
+    planner.addInput('alt_tailwind', 'kt', -10);
+    planner.addOutput('alt_air_dist', 'nm', round(1),
+        lookup(groundToAirMilesShort,
+            [
+                planner.value('alt_dist'),
+                planner.value('alt_tailwind')
+            ]));
+    planner.addOutput('alt_time', 'h:mm:ss', seconds(),
+        lookup(tripTimeRequiredShort,
+            [
+                planner.value('alt_air_dist'),
+            ]));
+    planner.addOutput('alt_altitude', 'ft', round(0),
+        lookup(tripAltitudeRequiredShort,
+            [
+                planner.value('alt_air_dist'),
+                planner.value('alt_arr_kg')
+            ]));
+    planner.addOutput('alt_fuel', 'lbs', ceil(0),
+        mul(TNtoLBS,
+            lookup(tripFuelRequiredShort,
+                [
+                    planner.value('alt_air_dist'),
+                    planner.value('alt_arr_kg')
+                ])));
+    
     // Departure
     planner.addInput('dep_head_mag', 'deg');
     planner.addInput('dep_mag_var', 'deg');
@@ -548,10 +648,10 @@ function loadPlanner(contId) {
             sin(planner.value('_offset_deg'))));
 
     // Payload
-    planner.addInput('payload', 'lbs');
+
     planner.addInput('trip_dist', 'nm');
     planner.addInput('trip_tailwind', 'kt');
-    planner.addOutput('air_dist', 'nm', ceil(0),
+    planner.addOutput('air_dist', 'nm', round(1),
         branch({
             if: lte(planner.value('trip_dist'),
                     constant(500)),
@@ -566,6 +666,11 @@ function loadPlanner(contId) {
                     planner.value('trip_tailwind')
                 ])
         }));
+    planner.addOutput('trip_time', 'h:mm:ss', seconds(),
+        lookup(tripTimeRequiredShort,
+            [planner.value('air_dist')])
+    );
+
     // Runway slope.
     planner.addInput('near_rw_alt', 'ft');
     planner.addInput('far_rw_alt', 'ft');
@@ -581,6 +686,99 @@ function loadPlanner(contId) {
     planner.computeDeps();
 
     // Forms
+    planner.addForm({
+        title: 'Payload',
+        fields: [
+            {
+                label: 'Cargo weight',
+                variable: 'cargo',
+            },
+            {
+                label: 'Passengers',
+                variable: 'pax',
+            },
+            {
+                label: 'Weight per pax',
+                variable: 'pax_weight',
+            },
+            {
+                label: 'Payload weight',
+                variable: 'payload',
+            },
+            {
+                label: 'Zero fuel weight',
+                variable: 'zero_fuel_lbs',
+            },
+            {
+                label: 'Zero fuel weight',
+                variable: 'zero_fuel_kg',
+            }
+        ]
+    });
+
+    planner.addForm({
+        title: 'Minimum fuel',
+        fields: [
+            {
+                label: 'Emergency fuel',
+                variable: 'min_fuel',
+            },
+            {
+                label: 'Extra fuel',
+                variable: 'extra_fuel',
+            },
+            {
+                label: 'Arrival taxi fuel',
+                variable: 'arr_taxi_fuel',
+            },
+            {
+                label: 'Landing fuel (alternate)',
+                variable: 'alt_arr_fuel',
+            },
+            {
+                label: 'Landing weight (alternate)',
+                variable: 'alt_arr_lbs',
+            },
+            {
+                label: 'Landing weight (alternate)',
+                variable: 'alt_arr_kg',
+            }
+        ]
+    });
+
+
+    planner.addForm({
+        title: 'Alternate',
+        fields: [
+            {
+                label: 'Distance',
+                variable: 'alt_dist',
+            },
+            {
+                label: 'Tailwind factor',
+                variable: 'alt_tailwind',
+            },
+            {
+                label: 'Air distance',
+                variable: 'alt_air_dist',
+            },
+            {
+                label: 'Flight time',
+                variable: 'alt_time',
+            },
+            {
+                label: 'Flight altitude',
+                variable: 'alt_altitude',
+            },
+            {
+                label: 'Fuel required',
+                variable: 'alt_fuel',
+            }
+        ]
+    });
+
+    
+
     planner.addForm({
         title: 'Departure',
         fields: [
@@ -636,6 +834,10 @@ function loadPlanner(contId) {
             {
                 label: 'Calculated Air Distance',
                 variable: 'air_dist',
+            },
+            {
+                label: 'Trip time',
+                variable: 'trip_time',
             }
         ]
     });
