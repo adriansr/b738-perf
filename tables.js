@@ -1,3 +1,13 @@
+// Data in this file is extracted from:
+//
+// BOEING 737-600/-700/-800/-900 Operations Manual
+//
+// Copyright (c) 1997 The Boeing Company
+// All Rights Reserved
+// Document Number D6-27370-TBC November 20, 1997
+// Revision Number: 10
+// Revision Date: September 30, 2002
+
 function range(from, to, step) {
     let r = [];
     for (let i=from; i<=to; i+=step) {
@@ -5,6 +15,34 @@ function range(from, to, step) {
     }
     return r;
 }
+
+// Short Trip Fuel and Time / Ground to Air Miles Conversion
+// Page PD.31.5
+var groundToAirMilesShort = {
+    keys: [
+        // Ground distance for trip (nm).
+        range(50, 500, 50),
+
+        // Tailwind factor (kt).
+        range(-100,100, 20),
+    ],
+    data: [
+        [ 93,  80,  69,  61,  55, 50,   46,  42,  39,  36,  34],
+        [160, 143, 129, 118, 108, 100,  93,  87,  82,  77,  73],
+        [225, 205, 188, 173, 161, 150, 141, 132, 125, 118, 112],
+        [290, 266, 246, 228, 213, 200, 188, 178, 169, 160, 153],
+        [353, 326, 303, 283, 265, 250, 236, 224, 213, 203, 194],
+        [416, 386, 360, 338, 318, 300, 284, 270, 257, 245, 235],
+        [478, 446, 417, 392, 370, 350, 332, 316, 301, 288, 276],
+        [542, 506, 474, 447, 422, 400, 380, 362, 346, 331, 317],
+        [606, 567, 532, 502, 474, 450, 428, 408, 390, 373, 358],
+        [672, 629, 591, 557, 527, 500, 476, 454, 434, 415, 398],
+    ]
+}
+
+
+// Long Range Cruise Trip Fuel and Time / Ground to Air Miles Conversion
+// Page PD.31.2
 var groundToAirMiles = {
     keys: [ 
         // Ground distance for trip (nm).
@@ -14,15 +52,6 @@ var groundToAirMiles = {
         range(-100,100,20),
     ],
 
-    // Data extracted from:
-    // BOEING 737-600/-700/-800/-900 Operations Manual
-    // Page PD-31-2
-    //
-    // Copyright (c) 1997 The Boeing Company
-    // All Rights Reserved
-    // Document Number D6-27370-TBC November 20, 1997
-    // Revision Number: 10
-    // Revision Date: September 30, 2002
     data: [
         [ 279,  259,  241,  226,  212,  200,  190,  181,  173,  166,  160],
         [ 554,  515,  480,  450,  424,  400,  382,  365,  349,  335,  322],

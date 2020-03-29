@@ -447,6 +447,43 @@ function lookup(table, dimensions) {
     }
 }
 
+function lt(a, b) {
+    return {
+        arg: [a, b],
+        get: function() {
+            return this.arg[0].get() < this.arg[1].get();
+        }
+    }
+}
+
+
+function eq(a, b) {
+    return {
+        arg: [a, b],
+        get: function() {
+            return this.arg[0].get() == this.arg[1].get();
+        }
+    }
+}
+
+function lte(a, b) {
+    return {
+        arg: [a, b],
+        get: function() {
+            return this.arg[0].get() <= this.arg[1].get();
+        }
+    }
+}
+
+function branch(opts) {
+    return {
+        arg: [opts.if, opts.then, opts.else],
+        get: function() {
+            return this.arg[this.arg[0].get()? 1:2].get();
+        }
+    }
+}
+
 function constant(value) {
     return {
         arg: [],
@@ -515,13 +552,20 @@ function loadPlanner(contId) {
     planner.addInput('trip_dist', 'nm');
     planner.addInput('trip_tailwind', 'kt');
     planner.addOutput('air_dist', 'nm', ceil(0),
-        lookup(groundToAirMiles, 
-            [
-                planner.value('trip_dist'),
-                planner.value('trip_tailwind')
-            ]
-            ));
-
+        branch({
+            if: lte(planner.value('trip_dist'),
+                    constant(500)),
+            then: lookup(groundToAirMilesShort,
+                [
+                    planner.value('trip_dist'),
+                    planner.value('trip_tailwind')
+                ]),
+            else: lookup(groundToAirMiles,
+                [
+                    planner.value('trip_dist'),
+                    planner.value('trip_tailwind')
+                ])
+        }));
     // Runway slope.
     planner.addInput('near_rw_alt', 'ft');
     planner.addInput('far_rw_alt', 'ft');
