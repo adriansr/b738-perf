@@ -4,12 +4,14 @@ body {
     background-image: url('bg.jpg');
     background-position: right;
 }
+
 div.group {
-    background: rgba(200,255,200,0.3);
-    /*display: table-cell;*/
+    background: rgba(230,230,250,0.6);
     border-style: solid;
-    vertical-align: middle;
+    display: block; /*table-cell;*/
+    /*vertical-align: middle;*/
     padding: 1em;
+    margin: 0.5em;
 }
 
 div.row {
