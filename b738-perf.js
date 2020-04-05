@@ -622,10 +622,15 @@ function loadPlanner(contId) {
                     planner.value('alt_arr_kg')
                 ])));
 
-    planner.addOutput('dep_fuel', 'lbs', ceil(0),
+    planner.addOutput('arr_fuel', 'lbs', ceil(0),
         add(planner.value('alt_fuel'),
-            planner.value('alt_arr_fuel'));
-    
+            planner.value('alt_arr_fuel')));
+    planner.addOutput('arr_weight', 'lbs', ceil(0),
+        add(planner.value('arr_fuel'),
+            planner.value('zero_fuel_lbs')));
+    planner.addOutput('arr_weight_kgs', 'kg', ceil(0),
+            mul(LBStoKG,
+                planner.value('arr_weight')));
     // Departure
     planner.addInput('dep_head_mag', 'deg');
     planner.addInput('dep_mag_var', 'deg');
@@ -670,7 +675,31 @@ function loadPlanner(contId) {
                 planner.value('trip_alt')
             ])
     );
+    planner.addOutput('_trip_base_fuel_tn', 'lbs', round(3),
+        lookup(tripFuelRequired,
+            [
+                planner.value('air_dist'),
+                planner.value('trip_alt')
+            ]));
 
+    planner.addOutput('trip_burn_lbs', 'lbs', ceil(0),
+        mul(TNtoLBS,
+        add(planner.value('_trip_base_fuel_tn'),
+            lookup(tripFuelAdjustments,
+                [
+                    planner.value('_trip_base_fuel_tn'),
+                    planner.value('arr_weight_kgs')
+                ]))));
+    planner.addOutput('dep_fuel', 'lbs', ceil(0),
+        add(planner.value('arr_fuel'),
+            planner.value('trip_burn_lbs')));
+    planner.addOutput('dep_weight_lbs', 'lbs', ceil(0),
+            add(planner.value('arr_weight'),
+                planner.value('trip_burn_lbs')));
+    planner.addOutput('dep_weight_kgs', 'kg', ceil(0),
+            mul(planner.value('dep_weight_lbs'),
+                LBStoKG));
+        
     // Runway slope.
     planner.addInput('near_rw_alt', 'ft');
     planner.addInput('far_rw_alt', 'ft');
@@ -801,6 +830,30 @@ function loadPlanner(contId) {
             {
                 label: 'Trip time',
                 variable: 'trip_time',
+            },
+            {
+                label: 'Fuel burn',
+                variable: 'trip_burn_lbs',
+            },
+            {
+                label: 'Arrival weight',
+                variable: 'arr_weight',
+            },
+            {
+                label: 'Arrival weight',
+                variable: 'arr_weight_kgs',
+            },
+            {
+                label: 'Departure fuel',
+                variable: 'dep_fuel',
+            },
+            {
+                label: 'Departure weight',
+                variable: 'dep_weight_lbs',
+            },
+            {
+                label: 'Departure weight',
+                variable: 'dep_weight_kgs',
             }
         ]
     });
